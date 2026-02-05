@@ -50,24 +50,34 @@ Visit http://localhost:5173
 
 ```
 src/
-├── components/          # Reusable components
+├── components/
+│   ├── ui/              # Reusable UI components
+│   │   ├── Alert.tsx    # Alert/notification component
+│   │   ├── Badge.tsx    # Status badges
+│   │   ├── Button.tsx   # Button with variants
+│   │   ├── Card.tsx     # Card container components
+│   │   ├── Input.tsx    # Form input with validation
+│   │   ├── Spinner.tsx  # Loading spinner
+│   │   └── index.ts     # Component exports
 │   ├── Layout.tsx       # Main layout with navigation
 │   └── ProtectedRoute.tsx
-├── lib/                 # Utilities and configurations
+├── lib/
 │   ├── api.ts           # Axios instance and helpers
 │   ├── auth.tsx         # Authentication context
 │   └── utils.ts         # Utility functions
-├── pages/               # Page components
+├── pages/
 │   ├── HomePage.tsx
 │   ├── LoginPage.tsx
 │   ├── RegisterPage.tsx
 │   ├── DashboardPage.tsx
 │   ├── ProfilePage.tsx
 │   └── NotFoundPage.tsx
+├── test/
+│   └── setup.ts         # Vitest setup
 ├── types/               # TypeScript type definitions
 ├── App.tsx              # Main app component
 ├── main.tsx             # Entry point
-└── index.css            # Global styles
+└── index.css            # Global styles with Tailwind
 ```
 
 ## Scripts
@@ -106,6 +116,44 @@ The template includes a complete authentication flow:
 - JWT token management with auto-refresh
 - Protected routes
 - Auth context with `useAuth()` hook
+
+## UI Components
+
+The template includes a set of reusable UI components in `src/components/ui/`:
+
+```typescript
+import { Button, Input, Card, Alert, Badge, Spinner } from '@/components/ui'
+
+// Button variants
+<Button variant="primary">Primary</Button>
+<Button variant="secondary">Secondary</Button>
+<Button variant="outline">Outline</Button>
+<Button variant="danger">Danger</Button>
+<Button loading>Loading...</Button>
+
+// Input with validation
+<Input label="Email" error="Invalid email" helperText="We'll never share your email" />
+
+// Card components
+<Card>
+  <CardHeader>
+    <CardTitle>Card Title</CardTitle>
+  </CardHeader>
+  <CardContent>Card content goes here</CardContent>
+  <CardFooter>Footer actions</CardFooter>
+</Card>
+
+// Alert variants
+<Alert variant="success" title="Success!">Operation completed.</Alert>
+<Alert variant="error" dismissible onDismiss={() => {}}>Something went wrong.</Alert>
+
+// Badge
+<Badge variant="success">Active</Badge>
+<Badge variant="warning">Pending</Badge>
+
+// Loading spinner
+<Spinner size="lg" />
+```
 
 ## Styling
 
