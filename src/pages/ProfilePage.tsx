@@ -1,18 +1,53 @@
-import { useState, FormEvent } from 'react'
+import { useReducer, FormEvent } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/lib/auth'
 import { api, getErrorMessage } from '@/lib/api'
 import { formatDateTime } from '@/lib/utils'
+import { Alert, Input, Image } from '@/components/ui'
+
+interface ProfileFormState {
+  firstName: string
+  lastName: string
+  bio: string
+  error: string
+  success: string
+}
+
+type ProfileFormAction =
+  | { type: 'SET_FIRST_NAME'; value: string }
+  | { type: 'SET_LAST_NAME'; value: string }
+  | { type: 'SET_BIO'; value: string }
+  | { type: 'SET_ERROR'; value: string }
+  | { type: 'SET_SUCCESS'; value: string }
+
+function profileFormReducer(state: ProfileFormState, action: ProfileFormAction): ProfileFormState {
+  switch (action.type) {
+    case 'SET_FIRST_NAME':
+      return { ...state, firstName: action.value }
+    case 'SET_LAST_NAME':
+      return { ...state, lastName: action.value }
+    case 'SET_BIO':
+      return { ...state, bio: action.value }
+    case 'SET_ERROR':
+      return { ...state, error: action.value, success: '' }
+    case 'SET_SUCCESS':
+      return { ...state, success: action.value, error: '' }
+    default:
+      return state
+  }
+}
 
 export default function ProfilePage() {
   const { user } = useAuth()
   const queryClient = useQueryClient()
 
-  const [firstName, setFirstName] = useState(user?.first_name || '')
-  const [lastName, setLastName] = useState(user?.last_name || '')
-  const [bio, setBio] = useState(user?.bio || '')
-  const [error, setError] = useState('')
-  const [success, setSuccess] = useState('')
+  const [state, dispatch] = useReducer(profileFormReducer, {
+    firstName: user?.first_name || '',
+    lastName: user?.last_name || '',
+    bio: user?.bio || '',
+    error: '',
+    success: '',
+  })
 
   const updateProfile = useMutation({
     mutationFn: async (data: { first_name: string; last_name: string; bio: string }) => {
@@ -21,21 +56,19 @@ export default function ProfilePage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['user'] })
-      setSuccess('Profile updated successfully!')
-      setError('')
+      dispatch({ type: 'SET_SUCCESS', value: 'Profile updated successfully!' })
     },
     onError: (err) => {
-      setError(getErrorMessage(err))
-      setSuccess('')
+      dispatch({ type: 'SET_ERROR', value: getErrorMessage(err) })
     },
   })
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault()
     updateProfile.mutate({
-      first_name: firstName,
-      last_name: lastName,
-      bio,
+      first_name: state.firstName,
+      last_name: state.lastName,
+      bio: state.bio,
     })
   }
 
@@ -47,7 +80,19 @@ export default function ProfilePage() {
         {/* Account info */}
         <div className="overflow-hidden rounded-lg bg-white shadow">
           <div className="px-4 py-5 sm:p-6">
-            <h2 className="text-lg font-medium text-gray-900">Account Information</h2>
+            <div className="flex items-center gap-4 mb-4">
+              {user?.avatar_url && (
+                <Image
+                  src={user.avatar_url}
+                  alt={user.username}
+                  layout="fixed"
+                  width={64}
+                  height={64}
+                  rounded="full"
+                />
+              )}
+              <h2 className="text-lg font-medium text-gray-900">Account Information</h2>
+            </div>
             <dl className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
                 <dt className="text-sm font-medium text-gray-500">Email</dt>
@@ -87,44 +132,36 @@ export default function ProfilePage() {
             <div className="px-4 py-5 sm:p-6">
               <h2 className="text-lg font-medium text-gray-900">Edit Profile</h2>
 
-              {error && (
-                <div className="mt-4 rounded-md bg-red-50 p-4">
-                  <p className="text-sm text-red-700">{error}</p>
-                </div>
+              {state.error && (
+                <Alert variant="error" className="mt-4">
+                  {state.error}
+                </Alert>
               )}
 
-              {success && (
-                <div className="mt-4 rounded-md bg-green-50 p-4">
-                  <p className="text-sm text-green-700">{success}</p>
-                </div>
+              {state.success && (
+                <Alert variant="success" className="mt-4">
+                  {state.success}
+                </Alert>
               )}
 
               <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div>
-                  <label htmlFor="firstName" className="label">
-                    First name
-                  </label>
-                  <input
-                    id="firstName"
-                    type="text"
-                    value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
-                    className="input mt-1"
-                  />
-                </div>
+                <Input
+                  id="firstName"
+                  label="First name"
+                  type="text"
+                  aria-label="First name"
+                  value={state.firstName}
+                  onChange={(e) => dispatch({ type: 'SET_FIRST_NAME', value: e.target.value })}
+                />
 
-                <div>
-                  <label htmlFor="lastName" className="label">
-                    Last name
-                  </label>
-                  <input
-                    id="lastName"
-                    type="text"
-                    value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
-                    className="input mt-1"
-                  />
-                </div>
+                <Input
+                  id="lastName"
+                  label="Last name"
+                  type="text"
+                  aria-label="Last name"
+                  value={state.lastName}
+                  onChange={(e) => dispatch({ type: 'SET_LAST_NAME', value: e.target.value })}
+                />
 
                 <div className="sm:col-span-2">
                   <label htmlFor="bio" className="label">
@@ -133,8 +170,9 @@ export default function ProfilePage() {
                   <textarea
                     id="bio"
                     rows={3}
-                    value={bio}
-                    onChange={(e) => setBio(e.target.value)}
+                    aria-label="Bio"
+                    value={state.bio}
+                    onChange={(e) => dispatch({ type: 'SET_BIO', value: e.target.value })}
                     className="input mt-1"
                     placeholder="Tell us about yourself..."
                   />

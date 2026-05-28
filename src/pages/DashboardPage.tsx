@@ -1,5 +1,6 @@
 import { useAuth } from '@/lib/auth'
 import { formatDate } from '@/lib/utils'
+import { Button, Card, Badge } from '@/components/ui'
 
 export default function DashboardPage() {
   const { user } = useAuth()
@@ -13,51 +14,51 @@ export default function DashboardPage() {
 
       {/* Stats */}
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-        <div className="overflow-hidden rounded-lg bg-white px-4 py-5 shadow sm:p-6">
+        <Card>
           <dt className="truncate text-sm font-medium text-gray-500">Account Status</dt>
           <dd className="mt-1 text-3xl font-semibold tracking-tight text-gray-900">
             {user?.is_active ? (
-              <span className="text-green-600">Active</span>
+              <Badge variant="success">Active</Badge>
             ) : (
-              <span className="text-red-600">Inactive</span>
+              <Badge variant="error">Inactive</Badge>
             )}
           </dd>
-        </div>
+        </Card>
 
-        <div className="overflow-hidden rounded-lg bg-white px-4 py-5 shadow sm:p-6">
+        <Card>
           <dt className="truncate text-sm font-medium text-gray-500">Member Since</dt>
           <dd className="mt-1 text-3xl font-semibold tracking-tight text-gray-900">
             {user?.date_joined ? formatDate(user.date_joined) : 'N/A'}
           </dd>
-        </div>
+        </Card>
 
-        <div className="overflow-hidden rounded-lg bg-white px-4 py-5 shadow sm:p-6">
+        <Card>
           <dt className="truncate text-sm font-medium text-gray-500">Email</dt>
           <dd className="mt-1 truncate text-lg font-semibold tracking-tight text-gray-900">
             {user?.email}
           </dd>
-        </div>
+        </Card>
       </div>
 
       {/* Quick actions */}
       <div className="mt-8">
         <h2 className="text-lg font-medium text-gray-900">Quick Actions</h2>
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <button className="btn-outline">View Profile</button>
-          <button className="btn-outline">Change Password</button>
-          <button className="btn-outline">Notifications</button>
-          <button className="btn-outline">Settings</button>
+          <Button variant="outline">View Profile</Button>
+          <Button variant="outline">Change Password</Button>
+          <Button variant="outline">Notifications</Button>
+          <Button variant="outline">Settings</Button>
         </div>
       </div>
 
       {/* Recent activity placeholder */}
       <div className="mt-8">
         <h2 className="text-lg font-medium text-gray-900">Recent Activity</h2>
-        <div className="mt-4 overflow-hidden rounded-lg bg-white shadow">
+        <Card className="mt-4">
           <div className="px-4 py-12 text-center text-gray-500">
             <p>No recent activity to display.</p>
           </div>
-        </div>
+        </Card>
       </div>
     </div>
   )

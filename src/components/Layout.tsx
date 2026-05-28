@@ -1,8 +1,23 @@
+import { useSyncExternalStore } from 'react'
 import { Outlet, Link } from 'react-router-dom'
 import { useAuth } from '@/lib/auth'
+import { Button } from '@/components/ui'
+
+function subscribe() {
+  return () => {}
+}
+
+function getCurrentYear() {
+  return new Date().getFullYear()
+}
+
+function getServerYear() {
+  return null as number | null
+}
 
 export default function Layout() {
   const { isAuthenticated, user, logout } = useAuth()
+  const currentYear = useSyncExternalStore(subscribe, getCurrentYear, getServerYear)
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -40,9 +55,9 @@ export default function Layout() {
                   >
                     {user?.email}
                   </Link>
-                  <button onClick={logout} className="btn-outline text-sm">
+                  <Button variant="outline" size="sm" onClick={logout}>
                     Logout
-                  </button>
+                  </Button>
                 </>
               ) : (
                 <>
@@ -68,7 +83,7 @@ export default function Layout() {
       <footer className="mt-auto bg-white">
         <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
           <p className="text-center text-sm text-gray-500">
-            &copy; {new Date().getFullYear()} MyApp. All rights reserved.
+            &copy; {currentYear} MyApp. All rights reserved.
           </p>
         </div>
       </footer>
