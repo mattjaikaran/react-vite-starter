@@ -37,7 +37,7 @@ function profileFormReducer(state: ProfileFormState, action: ProfileFormAction):
   }
 }
 
-export default function ProfilePage() {
+export function ProfilePage() {
   const { user } = useAuth()
   const queryClient = useQueryClient()
 

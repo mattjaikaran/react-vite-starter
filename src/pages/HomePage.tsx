@@ -1,83 +1,140 @@
 import { Link } from 'react-router-dom'
+import { Badge, Card, CardContent, CardHeader, CardTitle } from '@/components/ui'
 import { useAuth } from '@/lib/auth'
 
-export default function HomePage() {
+const features = [
+  {
+    title: 'React 19',
+    copy: 'Modern components, typed from the first render. Make the interface your own.',
+  },
+  {
+    title: 'Vite',
+    copy: 'A fast feedback loop for local development and a production build when you are ready.',
+  },
+  {
+    title: 'TailwindCSS',
+    copy: 'Shared primitives and an editable palette, without a new styling system to learn.',
+  },
+  {
+    title: 'TanStack Query',
+    copy: 'Server-state caching and an Axios API client ready for your backend.',
+  },
+  {
+    title: 'TypeScript',
+    copy: 'Clear contracts across your routes, components, and authentication flows.',
+  },
+  {
+    title: 'React Router',
+    copy: 'Public pages, protected routes, and a profile flow already connected.',
+  },
+]
+
+export function HomePage() {
   const { isAuthenticated } = useAuth()
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold tracking-tight text-gray-900 sm:text-5xl md:text-6xl">
-          <span className="block">Welcome to</span>
-          <span className="block text-primary-600">React Vite Starter</span>
-        </h1>
-        <p className="mx-auto mt-3 max-w-md text-base text-gray-500 sm:text-lg md:mt-5 md:max-w-3xl md:text-xl">
-          A modern React starter template with Vite, TailwindCSS, TanStack Query, and TypeScript.
-        </p>
-        <div className="mx-auto mt-5 max-w-md sm:flex sm:justify-center md:mt-8">
-          {isAuthenticated ? (
-            <Link to="/dashboard" className="btn-primary">
-              Go to Dashboard
-            </Link>
-          ) : (
-            <>
-              <div className="rounded-md shadow">
-                <Link to="/register" className="btn-primary w-full">
-                  Get started
+    <div className="home-shell">
+      <section className="hero-grid" aria-labelledby="home-title">
+        <div>
+          <p className="eyebrow">A small beginning. Room for something great.</p>
+          <h1 id="home-title">
+            Welcome to <span>React Vite Starter</span>
+          </h1>
+          <p className="hero-copy">
+            Less setup. More making. A thoughtful starting point for your next React application,
+            with the everyday essentials already in place.
+          </p>
+          <div className="hero-actions">
+            {isAuthenticated ? (
+              <Link to="/dashboard" className="btn-primary">
+                Go to Dashboard <span aria-hidden="true">↗</span>
+              </Link>
+            ) : (
+              <>
+                <Link to="/register" className="btn-primary">
+                  Get started <span aria-hidden="true">↗</span>
                 </Link>
-              </div>
-              <div className="mt-3 rounded-md shadow sm:ml-3 sm:mt-0">
-                <Link to="/login" className="btn-outline w-full">
+                <Link to="/login" className="btn-outline">
                   Sign in
                 </Link>
-              </div>
-            </>
-          )}
+              </>
+            )}
+          </div>
+          <p className="hero-note">React 19 · TypeScript · Vite · Made to be edited</p>
         </div>
-      </div>
+        <Card className="starter-card" padding="lg">
+          <CardHeader>
+            <div className="flex items-center justify-between gap-4">
+              <p className="eyebrow">Your starting point</p>
+              <Badge variant="success">Ready to build</Badge>
+            </div>
+            <CardTitle className="mt-5 text-2xl">The essentials, connected.</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ol className="starter-steps">
+              <li>
+                <span className="step-number">01</span>
+                <div>
+                  <strong>Find your direction</strong>
+                  <p>Edit this page and the shared theme to tell your story.</p>
+                </div>
+              </li>
+              <li>
+                <span className="step-number">02</span>
+                <div>
+                  <strong>Connect your backend</strong>
+                  <p>Use the API client and existing account flows.</p>
+                </div>
+              </li>
+              <li>
+                <span className="step-number">03</span>
+                <div>
+                  <strong>Make it yours</strong>
+                  <p>Build on reusable cards, inputs, buttons, and routes.</p>
+                </div>
+              </li>
+            </ol>
+            <a className="text-link" href="#features">
+              Explore the toolkit <span aria-hidden="true">↓</span>
+            </a>
+          </CardContent>
+        </Card>
+      </section>
 
-      {/* Features section */}
-      <div className="mt-20">
-        <h2 className="text-center text-3xl font-bold text-gray-900">Features</h2>
-        <div className="mt-10 grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-3">
-          <div className="rounded-lg bg-white p-6 shadow">
-            <h3 className="text-lg font-medium text-gray-900">React 18</h3>
-            <p className="mt-2 text-gray-500">
-              Latest React with concurrent features and improved performance.
-            </p>
+      <section id="features" className="features-section" aria-labelledby="features-title">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">A practical toolkit</p>
+            <h2 id="features-title">Features</h2>
           </div>
-          <div className="rounded-lg bg-white p-6 shadow">
-            <h3 className="text-lg font-medium text-gray-900">Vite</h3>
-            <p className="mt-2 text-gray-500">
-              Lightning fast HMR and optimized production builds.
-            </p>
-          </div>
-          <div className="rounded-lg bg-white p-6 shadow">
-            <h3 className="text-lg font-medium text-gray-900">TailwindCSS</h3>
-            <p className="mt-2 text-gray-500">
-              Utility-first CSS framework for rapid UI development.
-            </p>
-          </div>
-          <div className="rounded-lg bg-white p-6 shadow">
-            <h3 className="text-lg font-medium text-gray-900">TanStack Query</h3>
-            <p className="mt-2 text-gray-500">
-              Powerful data fetching and caching with React Query.
-            </p>
-          </div>
-          <div className="rounded-lg bg-white p-6 shadow">
-            <h3 className="text-lg font-medium text-gray-900">TypeScript</h3>
-            <p className="mt-2 text-gray-500">
-              Full type safety with TypeScript throughout the codebase.
-            </p>
-          </div>
-          <div className="rounded-lg bg-white p-6 shadow">
-            <h3 className="text-lg font-medium text-gray-900">React Router</h3>
-            <p className="mt-2 text-gray-500">
-              Client-side routing with React Router v6.
-            </p>
-          </div>
+          <p>
+            Good foundations stay out of your way.
+            <br />
+            Keep what you need. Shape what comes next.
+          </p>
         </div>
-      </div>
+        <div className="feature-grid">
+          {features.map(({ title, copy }, index) => (
+            <Card key={title} className="feature-card">
+              <p className="feature-index" aria-hidden="true">
+                0{index + 1}
+              </p>
+              <CardTitle>{title}</CardTitle>
+              <CardContent className="mt-3">
+                <p>{copy}</p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </section>
+      <aside className="closing-note">
+        <span className="eyebrow">Your next chapter</span>
+        <p>Start with a page. Build something useful.</p>
+        <Link className="text-link" to={isAuthenticated ? '/dashboard' : '/register'}>
+          {isAuthenticated ? 'Open your workspace' : 'Create your account'}{' '}
+          <span aria-hidden="true">→</span>
+        </Link>
+      </aside>
     </div>
   )
 }

@@ -2,7 +2,7 @@ import { useAuth } from '@/lib/auth'
 import { formatDate } from '@/lib/utils'
 import { Button, Card, Badge } from '@/components/ui'
 
-export default function DashboardPage() {
+export function DashboardPage() {
   const { user } = useAuth()
 
   return (

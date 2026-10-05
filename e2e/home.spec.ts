@@ -1,28 +1,37 @@
 import { test, expect } from '@playwright/test'
 
 test.describe('Home Page', () => {
-  test('should load the home page with correct title and content', async ({ page }) => {
+  test('public homepage actions reach the account routes', async ({ page }) => {
     await page.goto('/')
 
-    // Check page title
-    await expect(page).toHaveTitle(/React Vite Starter/)
-
-    // Check main heading
-    await expect(page.getByRole('heading', { name: /Welcome to/i })).toBeVisible()
-    await expect(page.getByText('React Vite Starter')).toBeVisible()
-
-    // Check feature cards are displayed
-    await expect(page.getByRole('heading', { name: 'Features' })).toBeVisible()
-    await expect(page.getByRole('heading', { name: 'React 18' })).toBeVisible()
-    await expect(page.getByRole('heading', { name: 'Vite' })).toBeVisible()
-    await expect(page.getByRole('heading', { name: 'TailwindCSS' })).toBeVisible()
+    await page.getByRole('link', { name: /Get started/i }).click()
+    await expect(page).toHaveURL('/register')
+    await page.goto('/')
+    await page.getByRole('link', { name: /Sign in/i }).click()
+    await expect(page).toHaveURL('/login')
   })
 
-  test('should show login and register buttons when not authenticated', async ({ page }) => {
+  test('keeps account navigation available on a narrow screen', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 })
     await page.goto('/')
+    const navigation = page.getByRole('navigation', { name: 'Main navigation' })
+    await expect(navigation.getByRole('link', { name: 'Login', exact: true })).toBeVisible()
+    await expect(navigation.getByRole('link', { name: 'Register', exact: true })).toBeVisible()
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)
+    ).toBe(true)
+  })
 
-    // Check CTA buttons for unauthenticated users
-    await expect(page.getByRole('link', { name: /Get started/i })).toBeVisible()
-    await expect(page.getByRole('link', { name: /Sign in/i })).toBeVisible()
+  test('supports dark mode and a keyboard skip link', async ({ page }) => {
+    await page.emulateMedia({ colorScheme: 'dark', reducedMotion: 'reduce' })
+    await page.goto('/')
+    await page.keyboard.press('Tab')
+    const skipLink = page.getByRole('link', { name: 'Skip to content' })
+    await expect(skipLink).toBeFocused()
+    await page.keyboard.press('Enter')
+    await expect(page.getByRole('main')).toBeFocused()
+    expect(await page.evaluate(() => getComputedStyle(document.documentElement).colorScheme)).toBe(
+      'dark'
+    )
   })
 })

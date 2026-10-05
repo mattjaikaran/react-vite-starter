@@ -10,21 +10,31 @@ export const api = axios.create({
   },
 })
 
-// Token management
+// The backend's bearer-JWT contract uses browser-persisted tokens.
+// Production deployments should prefer backend-issued HttpOnly cookies.
 const TOKEN_KEY = 'access_token'
 const REFRESH_TOKEN_KEY = 'refresh_token'
+const tokenListeners = new Set<() => void>()
 
 export const getAccessToken = () => localStorage.getItem(TOKEN_KEY)
 export const getRefreshToken = () => localStorage.getItem(REFRESH_TOKEN_KEY)
+export const subscribeTokens = (listener: () => void) => {
+  tokenListeners.add(listener)
+  return () => {
+    tokenListeners.delete(listener)
+  }
+}
 
-export const setTokens = (accessToken: string, refreshToken: string) => {
-  localStorage.setItem(TOKEN_KEY, accessToken)
-  localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken)
+export const setTokens = (access: string, refresh: string) => {
+  localStorage.setItem(TOKEN_KEY, access)
+  localStorage.setItem(REFRESH_TOKEN_KEY, refresh)
+  tokenListeners.forEach((listener) => listener())
 }
 
 export const clearTokens = () => {
   localStorage.removeItem(TOKEN_KEY)
   localStorage.removeItem(REFRESH_TOKEN_KEY)
+  tokenListeners.forEach((listener) => listener())
 }
 
 // Request interceptor - add auth header
@@ -42,7 +52,12 @@ api.interceptors.response.use(
   async (error: AxiosError) => {
     const originalRequest = error.config as AxiosRequestConfig & { _retry?: boolean }
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    if (
+      error.response?.status === 401 &&
+      originalRequest &&
+      !originalRequest._retry &&
+      getAccessToken()
+    ) {
       originalRequest._retry = true
 
       const refreshToken = getRefreshToken()
@@ -61,10 +76,12 @@ api.interceptors.response.use(
 
           return api(originalRequest)
         } catch {
-          clearTokens()
-          window.location.href = '/login'
+          // Expiration below invalidates auth; the protected route owns navigation.
         }
       }
+      clearTokens()
+    } else if (error.response?.status === 401 && originalRequest?._retry) {
+      clearTokens()
     }
 
     return Promise.reject(error)

@@ -1,6 +1,5 @@
 import {
   useState,
-  useRef,
   useCallback,
   type ReactNode,
   type SyntheticEvent,
@@ -41,7 +40,64 @@ const roundedMap: Record<Exclude<ImageRounded, false>, string> = {
   full: 'rounded-full',
 }
 
-const Image = ({
+function imageLayoutStyles(
+  layout: ImageLayout,
+  width: ImageProps['width'],
+  height: ImageProps['height'],
+  aspectRatio: string | undefined
+): { wrapperStyle: CSSProperties; sizeStyle: CSSProperties } {
+  switch (layout) {
+    case 'fill':
+      return {
+        wrapperStyle: { position: 'absolute', inset: 0 },
+        sizeStyle: { width: '100%', height: '100%' },
+      }
+    case 'fixed':
+      return {
+        wrapperStyle: { display: 'inline-block', position: 'relative', width, height },
+        sizeStyle: { width, height },
+      }
+    case 'intrinsic':
+      return {
+        wrapperStyle: { display: 'inline-block', position: 'relative', maxWidth: '100%' },
+        sizeStyle: { width, height },
+      }
+    case 'responsive':
+      return {
+        wrapperStyle: {
+          position: 'relative',
+          width: '100%',
+          aspectRatio: aspectRatio ?? (width && height ? `${width}/${height}` : undefined),
+        },
+        sizeStyle: { width: '100%', height: '100%' },
+      }
+  }
+}
+
+function ImagePlaceholderLayer({
+  placeholder,
+  blurDataURL,
+  roundedClass,
+  objectFit,
+}: Pick<ImageProps, 'placeholder' | 'blurDataURL' | 'objectFit'> & { roundedClass: string }) {
+  if (placeholder === 'skeleton') {
+    return <span className={cn('absolute inset-0 animate-pulse bg-gray-200', roundedClass)} />
+  }
+  if (placeholder === 'blur' && blurDataURL) {
+    return (
+      <img
+        src={blurDataURL}
+        aria-hidden
+        alt=""
+        className={cn('absolute inset-0 h-full w-full scale-110 blur-xl', roundedClass)}
+        style={{ objectFit }}
+      />
+    )
+  }
+  return null
+}
+
+const ImageContent = ({
   src,
   alt,
   layout = 'responsive',
@@ -63,20 +119,13 @@ const Image = ({
   onError,
   ...props
 }: ImageProps) => {
-  const prevSrcRef = useRef(src)
   const [useFallback, setUseFallback] = useState(false)
   const [status, setStatus] = useState<LoadStatus>('loading')
-
-  if (prevSrcRef.current !== src) {
-    prevSrcRef.current = src
-    setUseFallback(false)
-    setStatus('loading')
-  }
 
   const currentSrc = useFallback && fallbackSrc ? fallbackSrc : src
 
   const imgCallbackRef = useCallback((img: HTMLImageElement | null) => {
-    if (img?.complete) {
+    if (img?.complete && img.naturalWidth > 0) {
       setStatus('loaded')
     }
   }, [])
@@ -104,59 +153,20 @@ const Image = ({
     return <>{fallback}</>
   }
 
-  const wrapperStyle: CSSProperties = {}
-  const imgStyle: CSSProperties = { objectFit, objectPosition, ...style }
-
-  if (layout === 'fill') {
-    wrapperStyle.position = 'absolute'
-    wrapperStyle.inset = 0
-    imgStyle.width = '100%'
-    imgStyle.height = '100%'
-  } else if (layout === 'fixed') {
-    wrapperStyle.display = 'inline-block'
-    wrapperStyle.position = 'relative'
-    if (width) wrapperStyle.width = width
-    if (height) wrapperStyle.height = height
-    imgStyle.width = width
-    imgStyle.height = height
-  } else if (layout === 'intrinsic') {
-    wrapperStyle.display = 'inline-block'
-    wrapperStyle.position = 'relative'
-    wrapperStyle.maxWidth = '100%'
-    if (width) imgStyle.width = width
-    if (height) imgStyle.height = height
-  } else {
-    wrapperStyle.position = 'relative'
-    wrapperStyle.width = '100%'
-    if (aspectRatio) {
-      wrapperStyle.aspectRatio = aspectRatio
-    } else if (width && height) {
-      wrapperStyle.aspectRatio = `${width}/${height}`
-    }
-    imgStyle.width = '100%'
-    imgStyle.height = '100%'
-  }
-
-  const showSkeleton = isLoading && placeholder === 'skeleton'
-  const showBlur = isLoading && placeholder === 'blur' && Boolean(blurDataURL)
+  const { wrapperStyle, sizeStyle } = imageLayoutStyles(layout, width, height, aspectRatio)
+  const imgStyle: CSSProperties = { objectFit, objectPosition, ...style, ...sizeStyle }
 
   return (
     <span
       className={cn('block overflow-hidden', roundedClass, wrapperClassName)}
       style={wrapperStyle}
     >
-      {showSkeleton && (
-        <span
-          className={cn('absolute inset-0 animate-pulse bg-gray-200', roundedClass)}
-        />
-      )}
-      {showBlur && (
-        <img
-          src={blurDataURL}
-          aria-hidden
-          alt=""
-          className={cn('absolute inset-0 h-full w-full scale-110 blur-xl', roundedClass)}
-          style={{ objectFit }}
+      {isLoading && (
+        <ImagePlaceholderLayer
+          placeholder={placeholder}
+          blurDataURL={blurDataURL}
+          roundedClass={roundedClass}
+          objectFit={objectFit}
         />
       )}
       <img
@@ -173,7 +183,7 @@ const Image = ({
           'transition-opacity duration-300',
           isLoading ? 'opacity-0' : 'opacity-100',
           roundedClass,
-          className,
+          className
         )}
         style={imgStyle}
         {...props}
@@ -181,6 +191,9 @@ const Image = ({
     </span>
   )
 }
+
+// A new source owns a fresh load lifecycle, including fallback and placeholder state.
+const Image = (props: ImageProps) => <ImageContent key={props.src} {...props} />
 
 const AvatarImage = ({ size = 40, width, height, ...props }: AvatarImageProps) => (
   <Image
@@ -194,27 +207,11 @@ const AvatarImage = ({ size = 40, width, height, ...props }: AvatarImageProps) =
 )
 
 const HeroImage = (
-  props: Omit<ImageProps, 'layout' | 'aspectRatio' | 'priority' | 'objectFit'>,
-) => (
-  <Image
-    layout="responsive"
-    aspectRatio="16/9"
-    priority
-    objectFit="cover"
-    {...props}
-  />
-)
+  props: Omit<ImageProps, 'layout' | 'aspectRatio' | 'priority' | 'objectFit'>
+) => <Image layout="responsive" aspectRatio="16/9" priority objectFit="cover" {...props} />
 
 const ThumbnailImage = (
-  props: Omit<ImageProps, 'layout' | 'aspectRatio' | 'rounded' | 'objectFit'>,
-) => (
-  <Image
-    layout="responsive"
-    aspectRatio="16/9"
-    rounded="md"
-    objectFit="cover"
-    {...props}
-  />
-)
+  props: Omit<ImageProps, 'layout' | 'aspectRatio' | 'rounded' | 'objectFit'>
+) => <Image layout="responsive" aspectRatio="16/9" rounded="md" objectFit="cover" {...props} />
 
 export { Image, AvatarImage, HeroImage, ThumbnailImage }

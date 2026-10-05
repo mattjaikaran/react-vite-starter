@@ -40,5 +40,4 @@ coverage
 /playwright/.cache/
 
 # Cache
-.eslintcache
 *.tsbuildinfo

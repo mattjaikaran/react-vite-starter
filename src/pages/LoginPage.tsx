@@ -1,100 +1,104 @@
-import { useState, FormEvent } from 'react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '@/lib/auth'
 import { getErrorMessage } from '@/lib/api'
 
-export default function LoginPage() {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
+const loginSchema = z.object({
+  email: z.string().email('Enter a valid email address'),
+  password: z.string().min(1, 'Enter your password'),
+})
+type LoginValues = z.infer<typeof loginSchema>
 
+export function LoginPage() {
+  const {
+    register,
+    handleSubmit,
+    setError,
+    formState: { errors, isSubmitting },
+  } = useForm<LoginValues>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: { email: '', password: '' },
+  })
   const { login } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
+  const destination = (
+    location.state as { from?: { pathname?: string; search?: string; hash?: string } } | null
+  )?.from
+  const pathname = destination?.pathname
+  const from =
+    pathname?.startsWith('/') && !pathname.startsWith('//') && pathname !== '/login'
+      ? `${pathname}${destination?.search ?? ''}${destination?.hash ?? ''}`
+      : '/dashboard'
 
-  const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/dashboard'
-
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault()
-    setError('')
-    setIsLoading(true)
-
+  const onSubmit = async (values: LoginValues) => {
     try {
-      await login({ email, password })
+      await login(values)
       navigate(from, { replace: true })
-    } catch (err) {
-      setError(getErrorMessage(err))
-    } finally {
-      setIsLoading(false)
+    } catch (error) {
+      setError('root', { message: getErrorMessage(error) })
     }
   }
 
   return (
-    <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center px-4 py-12 sm:px-6 lg:px-8">
-      <div className="w-full max-w-md space-y-8">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-bold tracking-tight text-gray-900">
-            Sign in to your account
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            Or{' '}
-            <Link to="/register" className="font-medium text-primary-600 hover:text-primary-500">
-              create a new account
-            </Link>
-          </p>
-        </div>
-
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          {error && (
-            <div className="rounded-md bg-red-50 p-4">
-              <p className="text-sm text-red-700">{error}</p>
-            </div>
+    <section className="account-page" aria-labelledby="login-heading">
+      <div className="account-card">
+        <h1 id="login-heading">Sign in to your account</h1>
+        <p className="account-caption">
+          Or <Link to="/register">create a new account</Link>
+        </p>
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)} noValidate>
+          {errors.root && (
+            <p role="alert" className="account-error">
+              {errors.root.message}
+            </p>
           )}
-
-          <div className="space-y-4">
-            <div>
-              <label htmlFor="email" className="label">
-                Email address
-              </label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="email"
-                aria-label="Email address"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="input mt-1"
-                placeholder="you@example.com"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="password" className="label">
-                Password
-              </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="current-password"
-                aria-label="Password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="input mt-1"
-                placeholder="••••••••"
-              />
-            </div>
+          <div>
+            <label htmlFor="email" className="label">
+              Email address
+            </label>
+            <input
+              id="email"
+              type="email"
+              autoComplete="email"
+              className="input mt-1"
+              placeholder="you@example.com"
+              aria-invalid={!!errors.email}
+              aria-describedby={errors.email ? 'email-error' : undefined}
+              {...register('email')}
+            />
+            {errors.email && (
+              <p id="email-error" role="alert" className="account-error">
+                {errors.email.message}
+              </p>
+            )}
           </div>
-
-          <button type="submit" disabled={isLoading} className="btn-primary w-full">
-            {isLoading ? 'Signing in...' : 'Sign in'}
+          <div>
+            <label htmlFor="password" className="label">
+              Password
+            </label>
+            <input
+              id="password"
+              type="password"
+              autoComplete="current-password"
+              className="input mt-1"
+              aria-invalid={!!errors.password}
+              aria-describedby={errors.password ? 'password-error' : undefined}
+              {...register('password')}
+            />
+            {errors.password && (
+              <p id="password-error" role="alert" className="account-error">
+                {errors.password.message}
+              </p>
+            )}
+          </div>
+          <button type="submit" disabled={isSubmitting} className="btn-primary w-full">
+            {isSubmitting ? 'Signing in...' : 'Sign in'}
           </button>
         </form>
       </div>
-    </div>
+    </section>
   )
 }

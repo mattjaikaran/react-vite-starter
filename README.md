@@ -4,15 +4,15 @@ A modern React starter template with Vite, TailwindCSS, TanStack Query, and Type
 
 ## Features
 
-- **React 18** - Latest React with concurrent features
+- **React 19** - Modern React with concurrent features
 - **Vite** - Lightning fast HMR and optimized builds
 - **TypeScript** - Full type safety
 - **TailwindCSS** - Utility-first CSS framework
 - **TanStack Query** - Powerful data fetching and caching
-- **React Router v6** - Client-side routing
+- **React Router v7** - Client-side routing
 - **Axios** - HTTP client with interceptors
-- **Zod** - Schema validation
-- **ESLint + Prettier** - Code linting and formatting
+- **oxlint + oxfmt** - Native linting and formatting
+- **React Doctor** - React health checks without telemetry or supply-chain scanning
 - **Bun** - Fast JavaScript runtime and package manager
 
 ## Quick Start
@@ -24,22 +24,26 @@ A modern React starter template with Vite, TailwindCSS, TanStack Query, and Type
 ### Setup
 
 1. Clone the repository:
+
 ```bash
 git clone https://github.com/yourusername/react-vite-starter.git myapp
 cd myapp
 ```
 
 2. Install dependencies:
+
 ```bash
 bun install
 ```
 
 3. Copy environment file:
+
 ```bash
 cp .env.example .env
 ```
 
 4. Start development server:
+
 ```bash
 bun dev
 ```
@@ -86,8 +90,12 @@ src/
 bun dev        # Start development server
 bun build      # Build for production
 bun preview    # Preview production build
-bun lint       # Run ESLint
-bun format     # Format with Prettier
+bun run lint          # Run oxlint
+bun run lint:strict   # Treat lint warnings as failures
+bun run lint:fix      # Apply safe lint fixes
+bun run format        # Format with oxfmt
+bun run format:check  # Check formatting without writing
+bun run doctor        # Run React Doctor (blocking on errors)
 bun typecheck  # Run TypeScript check
 ```
 
@@ -116,6 +124,19 @@ The template includes a complete authentication flow:
 - JWT token management with auto-refresh
 - Protected routes
 - Auth context with `useAuth()` hook
+
+Login and registration use React Hook Form with Zod validation, associated inline
+errors, and real backend submissions. Registration signs in only after the API
+succeeds. Protected-route redirects preserve pathname, query, and fragment when
+returning from sign-in, and rejected refreshes clear auth before router navigation.
+
+The existing backend returns bearer JWTs; access and refresh tokens remain in
+`localStorage` so reloads preserve sessions. React Doctor's web-storage warning
+is intentionally visible: JavaScript-readable tokens are vulnerable to XSS.
+Do not deploy untrusted scripts; apply a restrictive CSP and sanitize untrusted
+content. A backend-issued Secure/HttpOnly/SameSite cookie flow is the preferred
+production model, but requires coordinated backend changes rather than a
+frontend-only storage swap.
 
 ## UI Components
 
@@ -165,6 +186,15 @@ Uses TailwindCSS with custom utility classes defined in `src/index.css`:
 - `.btn-outline` - Outlined button
 - `.input` - Form input styles
 - `.label` - Form label styles
+
+The editable warm-paper theme, responsive home composition, dark-mode behavior, and accessibility
+rules are documented in [DESIGN.md](./DESIGN.md). Change the semantic tokens in `src/index.css`
+and the primary palette in `tailwind.config.js` before introducing one-off colors.
+
+Tool versions are pinned in `package.json` and listed in [DEPENDENCIES.md](./DEPENDENCIES.md).
+The Oxc VS Code extension (`oxc.oxc-vscode`) provides lint diagnostics and format-on-save.
+`.oxlintrc.json` enables the built-in TypeScript, React, and JSX accessibility plugins, including
+Rules of Hooks and exhaustive dependencies. Generated output is excluded from both tools.
 
 ## Customization
 

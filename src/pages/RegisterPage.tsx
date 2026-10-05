@@ -1,186 +1,96 @@
-import { useReducer, FormEvent } from 'react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/lib/auth'
 import { getErrorMessage } from '@/lib/api'
 
-interface RegisterFormState {
-  email: string
-  username: string
-  password: string
-  confirmPassword: string
-  error: string
-  isLoading: boolean
-}
-
-type RegisterFormAction =
-  | { type: 'SET_EMAIL'; value: string }
-  | { type: 'SET_USERNAME'; value: string }
-  | { type: 'SET_PASSWORD'; value: string }
-  | { type: 'SET_CONFIRM_PASSWORD'; value: string }
-  | { type: 'SET_ERROR'; value: string }
-  | { type: 'SET_LOADING'; value: boolean }
-
-function registerFormReducer(state: RegisterFormState, action: RegisterFormAction): RegisterFormState {
-  switch (action.type) {
-    case 'SET_EMAIL':
-      return { ...state, email: action.value }
-    case 'SET_USERNAME':
-      return { ...state, username: action.value }
-    case 'SET_PASSWORD':
-      return { ...state, password: action.value }
-    case 'SET_CONFIRM_PASSWORD':
-      return { ...state, confirmPassword: action.value }
-    case 'SET_ERROR':
-      return { ...state, error: action.value }
-    case 'SET_LOADING':
-      return { ...state, isLoading: action.value }
-    default:
-      return state
-  }
-}
-
-export default function RegisterPage() {
-  const [state, dispatch] = useReducer(registerFormReducer, {
-    email: '',
-    username: '',
-    password: '',
-    confirmPassword: '',
-    error: '',
-    isLoading: false,
+const registrationSchema = z
+  .object({
+    email: z.string().email('Enter a valid email address'),
+    username: z.string().min(1, 'Enter a username'),
+    password: z.string().min(8, 'Password must be at least 8 characters'),
+    confirmPassword: z.string(),
   })
+  .refine((values) => values.password === values.confirmPassword, {
+    message: 'Passwords do not match',
+    path: ['confirmPassword'],
+  })
+type RegistrationValues = z.infer<typeof registrationSchema>
 
+const fields = [
+  { name: 'email', label: 'Email address', type: 'email', autoComplete: 'email' },
+  { name: 'username', label: 'Username', type: 'text', autoComplete: 'username' },
+  { name: 'password', label: 'Password', type: 'password', autoComplete: 'new-password' },
+  {
+    name: 'confirmPassword',
+    label: 'Confirm Password',
+    type: 'password',
+    autoComplete: 'new-password',
+  },
+] as const
+
+export function RegisterPage() {
+  const {
+    register: registerField,
+    handleSubmit,
+    setError,
+    formState: { errors, isSubmitting },
+  } = useForm<RegistrationValues>({
+    resolver: zodResolver(registrationSchema),
+    defaultValues: { email: '', username: '', password: '', confirmPassword: '' },
+  })
   const { register, login } = useAuth()
   const navigate = useNavigate()
-
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault()
-    dispatch({ type: 'SET_ERROR', value: '' })
-
-    if (state.password !== state.confirmPassword) {
-      dispatch({ type: 'SET_ERROR', value: 'Passwords do not match' })
-      return
-    }
-
-    if (state.password.length < 8) {
-      dispatch({ type: 'SET_ERROR', value: 'Password must be at least 8 characters' })
-      return
-    }
-
-    dispatch({ type: 'SET_LOADING', value: true })
-
+  const onSubmit = async ({ email, username, password }: RegistrationValues) => {
     try {
-      await register({ email: state.email, username: state.username, password: state.password })
-      // Auto-login after registration
-      await login({ email: state.email, password: state.password })
+      await register({ email, username, password })
+      await login({ email, password })
       navigate('/dashboard', { replace: true })
-    } catch (err) {
-      dispatch({ type: 'SET_ERROR', value: getErrorMessage(err) })
-    } finally {
-      dispatch({ type: 'SET_LOADING', value: false })
+    } catch (error) {
+      setError('root', { message: getErrorMessage(error) })
     }
   }
 
   return (
-    <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center px-4 py-12 sm:px-6 lg:px-8">
-      <div className="w-full max-w-md space-y-8">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-bold tracking-tight text-gray-900">
-            Create your account
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            Already have an account?{' '}
-            <Link to="/login" className="font-medium text-primary-600 hover:text-primary-500">
-              Sign in
-            </Link>
-          </p>
-        </div>
-
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          {state.error && (
-            <div className="rounded-md bg-red-50 p-4">
-              <p className="text-sm text-red-700">{state.error}</p>
-            </div>
+    <section className="account-page" aria-labelledby="register-heading">
+      <div className="account-card">
+        <h1 id="register-heading">Create your account</h1>
+        <p className="account-caption">
+          Already have an account? <Link to="/login">Sign in</Link>
+        </p>
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)} noValidate>
+          {errors.root && (
+            <p role="alert" className="account-error">
+              {errors.root.message}
+            </p>
           )}
-
-          <div className="space-y-4">
-            <div>
-              <label htmlFor="email" className="label">
-                Email address
+          {fields.map((field) => (
+            <div key={field.name}>
+              <label htmlFor={field.name} className="label">
+                {field.label}
               </label>
               <input
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="email"
-                aria-label="Email address"
-                required
-                value={state.email}
-                onChange={(e) => dispatch({ type: 'SET_EMAIL', value: e.target.value })}
+                id={field.name}
+                type={field.type}
+                autoComplete={field.autoComplete}
                 className="input mt-1"
-                placeholder="you@example.com"
+                aria-invalid={!!errors[field.name]}
+                aria-describedby={errors[field.name] ? `${field.name}-error` : undefined}
+                {...registerField(field.name)}
               />
+              {errors[field.name] && (
+                <p id={`${field.name}-error`} role="alert" className="account-error">
+                  {errors[field.name]?.message}
+                </p>
+              )}
             </div>
-
-            <div>
-              <label htmlFor="username" className="label">
-                Username
-              </label>
-              <input
-                id="username"
-                name="username"
-                type="text"
-                autoComplete="username"
-                aria-label="Username"
-                required
-                value={state.username}
-                onChange={(e) => dispatch({ type: 'SET_USERNAME', value: e.target.value })}
-                className="input mt-1"
-                placeholder="johndoe"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="password" className="label">
-                Password
-              </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="new-password"
-                aria-label="Password"
-                required
-                value={state.password}
-                onChange={(e) => dispatch({ type: 'SET_PASSWORD', value: e.target.value })}
-                className="input mt-1"
-                placeholder="••••••••"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="confirmPassword" className="label">
-                Confirm Password
-              </label>
-              <input
-                id="confirmPassword"
-                name="confirmPassword"
-                type="password"
-                autoComplete="new-password"
-                aria-label="Confirm Password"
-                required
-                value={state.confirmPassword}
-                onChange={(e) => dispatch({ type: 'SET_CONFIRM_PASSWORD', value: e.target.value })}
-                className="input mt-1"
-                placeholder="••••••••"
-              />
-            </div>
-          </div>
-
-          <button type="submit" disabled={state.isLoading} className="btn-primary w-full">
-            {state.isLoading ? 'Creating account...' : 'Create account'}
+          ))}
+          <button type="submit" disabled={isSubmitting} className="btn-primary w-full">
+            {isSubmitting ? 'Creating account...' : 'Create account'}
           </button>
         </form>
       </div>
-    </div>
+    </section>
   )
 }

@@ -1,6 +1,6 @@
-import { createContext, use, ReactNode } from 'react'
+import { createContext, use, useCallback, useMemo, useSyncExternalStore, ReactNode } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { api, setTokens, clearTokens, getAccessToken } from './api'
+import { api, setTokens, clearTokens, getAccessToken, subscribeTokens } from './api'
 
 // Types
 export interface User {
@@ -57,7 +57,8 @@ const registerUser = async (userData: RegisterData) => {
 
 // Provider component
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const isAuthenticated = !!getAccessToken()
+  const accessToken = useSyncExternalStore(subscribeTokens, getAccessToken, () => null)
+  const isAuthenticated = !!accessToken
   const queryClient = useQueryClient()
 
   // Fetch current user
@@ -85,30 +86,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
   })
 
+  const { mutateAsync: submitLogin } = loginMutation
+  const { mutateAsync: submitRegistration } = registerMutation
+
   // Logout function
-  const logout = () => {
+  const logout = useCallback(() => {
     clearTokens()
     queryClient.clear()
-  }
+  }, [queryClient])
 
-  const value: AuthContextType = {
-    user: user ?? null,
-    isLoading,
-    isAuthenticated,
-    login: async (credentials) => {
-      await loginMutation.mutateAsync(credentials)
+  const login = useCallback(
+    async (credentials: LoginCredentials) => {
+      await submitLogin(credentials)
     },
-    register: async (data) => {
-      await registerMutation.mutateAsync(data)
+    [submitLogin]
+  )
+  const register = useCallback(
+    async (data: RegisterData) => {
+      await submitRegistration(data)
     },
-    logout,
-  }
+    [submitRegistration]
+  )
+
+  const value = useMemo<AuthContextType>(
+    () => ({
+      user: isAuthenticated ? (user ?? null) : null,
+      isLoading: isAuthenticated && isLoading,
+      isAuthenticated,
+      login,
+      register,
+      logout,
+    }),
+    [user, isLoading, isAuthenticated, login, register, logout]
+  )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
 // Hook
-// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth() {
   const context = use(AuthContext)
   if (context === undefined) {
