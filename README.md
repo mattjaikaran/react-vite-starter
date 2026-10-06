@@ -187,9 +187,9 @@ Uses TailwindCSS with custom utility classes defined in `src/index.css`:
 - `.input` - Form input styles
 - `.label` - Form label styles
 
-The editable warm-paper theme, responsive home composition, dark-mode behavior, and accessibility
-rules are documented in [DESIGN.md](./DESIGN.md). Change the semantic tokens in `src/index.css`
-and the primary palette in `tailwind.config.js` before introducing one-off colors.
+[DESIGN.md](./DESIGN.md) is the authoritative repository-local guide for applying a new visual
+design, including the source edit map, design brief, ordered workflow, and visual verification.
+Preserve its system-default appearance and persistent direct light/dark toggle contract.
 
 Tool versions are pinned in `package.json` and listed in [DEPENDENCIES.md](./DEPENDENCIES.md).
 The Oxc VS Code extension (`oxc.oxc-vscode`) provides lint diagnostics and format-on-save.

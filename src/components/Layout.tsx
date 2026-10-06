@@ -1,9 +1,11 @@
 import { Outlet, Link, NavLink } from 'react-router-dom'
 import { useAuth } from '@/lib/auth'
 import { Button } from '@/components/ui'
+import { toggleTheme, useTheme } from '@/lib/theme'
 
 export function Layout() {
   const { isAuthenticated, user, logout } = useAuth()
+  const theme = useTheme()
 
   return (
     <div className="app-shell">
@@ -27,6 +29,14 @@ export function Layout() {
             {isAuthenticated && <NavLink to="/dashboard">Dashboard</NavLink>}
           </div>
           <div className="nav-actions">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={toggleTheme}
+              aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+            >
+              {theme === 'dark' ? 'Light mode' : 'Dark mode'}
+            </Button>
             {isAuthenticated ? (
               <>
                 <Link to="/profile" className="profile-link">
