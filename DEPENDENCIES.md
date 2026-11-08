@@ -6,7 +6,7 @@ listed here. Add a row when you add a dependency.
 | Package                        | Version  |
 | ------------------------------ | -------- |
 | @playwright/test               | 1.50.0   |
-| @hookform/resolvers            | 3.9.0    |
+| @hookform/resolvers            | 5.2.2    |
 | @hey-api/openapi-ts            | 0.99.0   |
 | @tanstack/react-query          | 5.100.14 |
 | @tanstack/react-query-devtools | 5.100.14 |

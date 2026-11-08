@@ -44,9 +44,8 @@ try {
 
   if (drift.length) {
     console.error(`Generated API drift. Run \`bun run api:generate\`.\n${drift.join('\n')}`)
-    process.exit(1)
-  }
-  console.log('Generated API matches the OpenAPI contract.')
+    process.exitCode = 1
+  } else console.log('Generated API matches the OpenAPI contract.')
 } finally {
   await rm(temporary, { recursive: true, force: true })
 }
