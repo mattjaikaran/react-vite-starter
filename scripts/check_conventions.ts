@@ -39,6 +39,7 @@ const EXCLUDE_DIRS = new Set([
   'coverage',
   '.vscode',
   'src/components/ui',
+  'src/api/generated',
 ])
 
 const API_DIRS = ['src/lib/']

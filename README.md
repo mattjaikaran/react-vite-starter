@@ -9,6 +9,7 @@ A modern React starter template with Vite, TailwindCSS, TanStack Query, and Type
 - **TypeScript** - Full type safety
 - **TailwindCSS** - Utility-first CSS framework
 - **TanStack Query** - Powerful data fetching and caching
+- **OpenAPI client generation** - hey-api types, SDK, Zod schemas, and query hooks
 - **React Router v7** - Client-side routing
 - **Axios** - HTTP client with interceptors
 - **oxlint + oxfmt** - Native linting and formatting
@@ -53,7 +54,13 @@ Visit http://localhost:5173
 ## Project Structure
 
 ```
+backend/
+└── docs/openapi/
+    └── openapi.json     # Vendored contract fixture
+openapi-ts.config.ts     # hey-api generator configuration
 src/
+├── api/
+│   └── generated/       # Generated types, SDK, Zod schemas, query hooks
 ├── components/
 │   ├── ui/              # Reusable UI components
 │   │   ├── Alert.tsx    # Alert/notification component
@@ -97,11 +104,36 @@ bun run format        # Format with oxfmt
 bun run format:check  # Check formatting without writing
 bun run doctor        # Run React Doctor (blocking on errors)
 bun typecheck  # Run TypeScript check
+bun run api:generate  # Regenerate src/api/generated from the OpenAPI contract
+bun run api:check     # Fail when src/api/generated is stale
 ```
 
 ## API Integration
 
-The template is configured to work with a Django API backend (like [django-api-starter](https://github.com/yourusername/django-api-starter)).
+The template is configured to work with a Django API backend (like [django-api-starter](https://github.com/yourusername/django-api-starter)) and ships an [@hey-api/openapi-ts](https://heyapi.dev) generated client.
+
+### Generated Client
+
+`src/api/generated/` holds the committed output: TypeScript types, the axios-backed
+SDK, Zod request/response schemas, and TanStack Query options/hooks. It is generated
+from `backend/docs/openapi/openapi.json`, a fixture of the paired backend, so the app
+builds and typechecks before a backend exists.
+
+```bash
+bun run api:generate  # Regenerate after the contract changes
+bun run api:check     # Fails when src/api/generated drifts from the contract
+```
+
+`openapi-ts.config.ts` reads `OPENAPI_INPUT` (default: the vendored fixture). Point
+it at your producer's document in a monorepo:
+
+```bash
+OPENAPI_INPUT=../backend/docs/openapi/openapi.json bun run api:generate
+```
+
+The generated SDK uses the axios instance from `src/lib/api.ts`, so requests keep the
+bearer-token and refresh interceptors. `api:check` runs as the first gauntlet step;
+generated files are excluded from lint and format.
 
 ### Development Proxy
 
@@ -109,11 +141,14 @@ In development, API requests to `/api/*` are proxied to `http://localhost:8000` 
 
 ### Production
 
-Set the `VITE_API_URL` environment variable to your API URL:
+Set the `VITE_API_URL` environment variable to your API origin:
 
 ```env
 VITE_API_URL=https://api.example.com
 ```
+
+Operation URLs already include `/api`, so leave the variable empty in development
+and set only the origin in production.
 
 ## Authentication
 
@@ -205,26 +240,29 @@ Rules of Hooks and exhaustive dependencies. Generated output is excluded from bo
 
 ### Adding API Endpoints
 
-Use the `api` instance from `src/lib/api.ts`:
+Add the operation to the OpenAPI contract, then regenerate:
+
+```bash
+bun run api:generate
+```
+
+Use the generated SDK and query options instead of handwritten axios calls:
 
 ```typescript
-import { api } from '@/lib/api'
+import { authGetCurrentUser, authLogin } from '@/api/generated'
+import { authGetCurrentUserOptions } from '@/api/generated/@tanstack/react-query.gen'
 
-const fetchUsers = async () => {
-  const { data } = await api.get('/users')
-  return data
-}
+const { data } = await authGetCurrentUser()
+await authLogin({ body: { email, password } })
 ```
 
 ### TanStack Query
 
 ```typescript
 import { useQuery } from '@tanstack/react-query'
+import { authGetCurrentUserOptions } from '@/api/generated/@tanstack/react-query.gen'
 
-const { data, isLoading, error } = useQuery({
-  queryKey: ['users'],
-  queryFn: fetchUsers,
-})
+const { data, isLoading, error } = useQuery(authGetCurrentUserOptions())
 ```
 
 ## Deployment

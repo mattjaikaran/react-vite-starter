@@ -1,32 +1,19 @@
 import { createContext, use, useCallback, useMemo, useSyncExternalStore, ReactNode } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { api, setTokens, clearTokens, getAccessToken, subscribeTokens } from './api'
+import {
+  authGetCurrentUserOptions,
+  authGetCurrentUserQueryKey,
+  authLoginMutation,
+  authRegisterMutation,
+} from '@/api/generated/@tanstack/react-query.gen'
+import type { LoginRequest, RegisterRequest, User } from '@/api/generated'
+import { setTokens, clearTokens, getAccessToken, subscribeTokens } from './api'
+
+export type { User }
 
 // Types
-export interface User {
-  id: number
-  email: string
-  username: string
-  first_name: string
-  last_name: string
-  avatar_url: string | null
-  bio: string
-  is_active: boolean
-  date_joined: string
-}
-
-export interface LoginCredentials {
-  email: string
-  password: string
-}
-
-export interface RegisterData {
-  email: string
-  username: string
-  password: string
-  first_name?: string
-  last_name?: string
-}
+export type LoginCredentials = LoginRequest
+export type RegisterData = RegisterRequest
 
 interface AuthContextType {
   user: User | null
@@ -39,22 +26,6 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
-// Auth API functions
-const fetchCurrentUser = async (): Promise<User> => {
-  const { data } = await api.get('/auth/me')
-  return data
-}
-
-const loginUser = async (credentials: LoginCredentials) => {
-  const { data } = await api.post('/auth/login', credentials)
-  return data
-}
-
-const registerUser = async (userData: RegisterData) => {
-  const { data } = await api.post('/auth/register', userData)
-  return data
-}
-
 // Provider component
 export function AuthProvider({ children }: { children: ReactNode }) {
   const accessToken = useSyncExternalStore(subscribeTokens, getAccessToken, () => null)
@@ -63,26 +34,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Fetch current user
   const { data: user, isLoading } = useQuery({
-    queryKey: ['user'],
-    queryFn: fetchCurrentUser,
+    ...authGetCurrentUserOptions(),
     enabled: isAuthenticated,
     retry: false,
   })
 
   // Login mutation
   const loginMutation = useMutation({
-    mutationFn: loginUser,
+    ...authLoginMutation(),
     onSuccess: (data) => {
       setTokens(data.access_token, data.refresh_token)
-      queryClient.invalidateQueries({ queryKey: ['user'] })
+      queryClient.invalidateQueries({ queryKey: authGetCurrentUserQueryKey() })
     },
   })
 
   // Register mutation
   const registerMutation = useMutation({
-    mutationFn: registerUser,
+    ...authRegisterMutation(),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['user'] })
+      queryClient.invalidateQueries({ queryKey: authGetCurrentUserQueryKey() })
     },
   })
 
@@ -97,13 +67,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = useCallback(
     async (credentials: LoginCredentials) => {
-      await submitLogin(credentials)
+      await submitLogin({ body: credentials })
     },
     [submitLogin]
   )
   const register = useCallback(
     async (data: RegisterData) => {
-      await submitRegistration(data)
+      await submitRegistration({ body: data })
     },
     [submitRegistration]
   )

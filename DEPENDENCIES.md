@@ -7,6 +7,7 @@ listed here. Add a row when you add a dependency.
 | ------------------------------ | -------- |
 | @playwright/test               | 1.50.0   |
 | @hookform/resolvers            | 3.9.0    |
+| @hey-api/openapi-ts            | 0.99.0   |
 | @tanstack/react-query          | 5.100.14 |
 | @tanstack/react-query-devtools | 5.100.14 |
 | @testing-library/jest-dom      | 6.4.2    |
@@ -31,7 +32,7 @@ listed here. Add a row when you add a dependency.
 | typescript                     | 5.5.2    |
 | vite                           | 5.3.2    |
 | vitest                         | 1.3.1    |
-| zod                            | 3.23.8   |
+| zod                            | 4.6.5    |
 
 Form dependencies match the full templates' pinned versions. `bun add --exact`
 updated `package.json` and `bun.lock`; commit both files together.

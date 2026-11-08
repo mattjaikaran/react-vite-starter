@@ -5,5 +5,12 @@
   "tabWidth": 2,
   "trailingComma": "es5",
   "printWidth": 100,
-  "ignorePatterns": ["dist", "coverage", "playwright-report", "test-results", "bun.lock"]
+  "ignorePatterns": [
+    "dist",
+    "coverage",
+    "playwright-report",
+    "test-results",
+    "src/api/generated",
+    "bun.lock"
+  ]
 }
