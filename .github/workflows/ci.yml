@@ -104,7 +104,7 @@ jobs:
 
   e2e:
     needs: changes
-    if: needs.changes.outputs.code == 'true' && hashFiles('playwright.config.ts') != ''
+    if: needs.changes.outputs.code == 'true'
     runs-on: *runner
     timeout-minutes: 20
     steps:
