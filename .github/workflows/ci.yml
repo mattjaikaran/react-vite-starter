@@ -1,81 +1,142 @@
 name: CI
 
+# Diff-only on pull requests and pushes to main (the `changes` job); manual
+# runs run everything. What skips: Markdown, docs and license files.
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
+# A pull request's newer commit replaces its older run. Push runs get one
+# group per commit and never cancel each other.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+# GitHub-hosted runners fail for this account (billing): the jobs run on the
+# self-hosted runners on CT 107 with the react-vite-starter label.
 jobs:
-  lint-and-test:
-    runs-on: ubuntu-latest
-
+  changes:
+    runs-on: &runner [self-hosted, Linux, X64, react-vite-starter]
+    timeout-minutes: 5
+    outputs:
+      code: ${{ steps.scope.outputs.code }}
+    permissions: { contents: read }
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v1
+      - uses: actions/checkout@v4
         with:
-          bun-version: latest
+          fetch-depth: 0
+      - id: scope
+        env:
+          EVENT: ${{ github.event_name }}
+          BEFORE: ${{ github.event.before }}
+        run: |
+          case "$EVENT" in
+            pull_request) range="origin/main...HEAD" ;;
+            push) range="$BEFORE...$GITHUB_SHA" ;;
+            *) range="" ;;
+          esac
+          code=true
+          if [ -n "$range" ] && files="$(git diff --name-only "$range")"; then
+            printf '%s\n' "$files" | sed 's/^/changed: /'
+            if [ -n "$files" ] && ! printf '%s\n' "$files" | grep -qvE '\.md$|^docs/|^LICENSE'; then
+              code=false
+            fi
+          fi
+          echo "code=$code" | tee -a "$GITHUB_OUTPUT"
 
-      - name: Install dependencies
-        run: bun install
+  lint:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: *runner
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with: { bun-version: latest }
+      - uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
+          restore-keys: ${{ runner.os }}-bun-
+      - run: bun install --frozen-lockfile
+      - run: bun run lint
+      - run: bun run format:check
+      - run: bun run check-conventions
+      - run: bun run check-dependencies
 
-      - name: Run type checking
-        run: bun run typecheck
+  typecheck:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: *runner
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with: { bun-version: latest }
+      - uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
+          restore-keys: ${{ runner.os }}-bun-
+      - run: bun install --frozen-lockfile
+      - run: bun run typecheck
+      - run: bun run test
 
-      - name: Run linting
-        run: bun run lint
-
-      - name: Run tests
-        run: bun run test
+  build:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: *runner
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with: { bun-version: latest }
+      - uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
+          restore-keys: ${{ runner.os }}-bun-
+      - run: bun install --frozen-lockfile
+      - run: bun run build
 
   e2e:
-    runs-on: ubuntu-latest
-    needs: lint-and-test
-
+    needs: changes
+    if: needs.changes.outputs.code == 'true' && hashFiles('playwright.config.ts') != ''
+    runs-on: *runner
+    timeout-minutes: 20
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v1
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with: { bun-version: latest }
+      - uses: actions/cache@v4
         with:
-          bun-version: latest
-
-      - name: Install dependencies
-        run: bun install
-
-      - name: Install Playwright browsers
-        run: bunx playwright install --with-deps chromium
-
-      - name: Run E2E tests
-        run: bun run test:e2e
-
-      - name: Upload Playwright report
-        uses: actions/upload-artifact@v4
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
+          restore-keys: ${{ runner.os }}-bun-
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('bun.lock') }}
+      - run: bun install --frozen-lockfile
+      - run: bunx playwright install --with-deps chromium
+      - run: bun run test:e2e
+      - uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}
         with:
           name: playwright-report
           path: playwright-report/
           retention-days: 7
 
-  build:
-    runs-on: ubuntu-latest
-    needs: [lint-and-test, e2e]
-
+  # The one required check: passes when each job passed or was skipped.
+  ci-result:
+    needs: [changes, lint, typecheck, build, e2e]
+    if: ${{ always() }}
+    runs-on: *runner
+    timeout-minutes: 2
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v1
-        with:
-          bun-version: latest
-
-      - name: Install dependencies
-        run: bun install
-
-      - name: Build application
-        run: bun run build
+      - run: |
+          echo '${{ toJSON(needs) }}'
+          test "${{ (contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')) && 'failed' || 'ok' }}" = ok
