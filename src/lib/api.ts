@@ -1,6 +1,9 @@
 import axios, { AxiosError, AxiosRequestConfig } from 'axios'
+import { client } from '@/api/generated/client.gen'
 
-const API_URL = import.meta.env.VITE_API_URL || '/api'
+// Empty by default: generated operation URLs already include the `/api` prefix,
+// so the Vite dev proxy handles them and production only supplies the origin.
+const API_URL = import.meta.env.VITE_API_URL || ''
 
 // Create axios instance
 export const api = axios.create({
@@ -63,7 +66,7 @@ api.interceptors.response.use(
       const refreshToken = getRefreshToken()
       if (refreshToken) {
         try {
-          const response = await axios.post(`${API_URL}/auth/refresh`, {
+          const response = await axios.post(`${API_URL}/api/auth/refresh`, {
             refresh_token: refreshToken,
           })
 
@@ -87,6 +90,10 @@ api.interceptors.response.use(
     return Promise.reject(error)
   }
 )
+
+// Generated SDK calls go through the same instance, so they inherit the auth
+// and token-refresh interceptors above.
+client.setConfig({ axios: api })
 
 // API error type
 export interface ApiError {

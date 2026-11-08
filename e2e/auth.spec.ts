@@ -105,6 +105,62 @@ test.describe('Authentication Flow', () => {
     await expect(page).toHaveURL('/dashboard')
   })
 
+  test('saves profile changes through the generated client', async ({ page }) => {
+    const user = {
+      id: 1,
+      email: 'test@example.com',
+      username: 'testuser',
+      first_name: '',
+      last_name: '',
+      avatar_url: null,
+      bio: '',
+      is_active: true,
+      date_joined: '2024-01-01T00:00:00Z',
+    }
+    let profileUpdate: unknown
+
+    await page.route('**/api/auth/login', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ access_token: 'test-access', refresh_token: 'test-refresh' }),
+      })
+    )
+    await page.route('**/api/auth/me', async (route) => {
+      if (route.request().method() === 'PATCH') {
+        profileUpdate = route.request().postDataJSON()
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ ...user, first_name: 'Ada', bio: 'Mathematician' }),
+        })
+        return
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(user),
+      })
+    })
+
+    await page.goto('/profile')
+    await page.getByLabel('Email address').fill('test@example.com')
+    await page.getByLabel('Password', { exact: true }).fill('password123')
+    await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+    await expect(page).toHaveURL('/profile')
+
+    await page.getByLabel('First name').fill('Ada')
+    await page.getByLabel('Bio').fill('Mathematician')
+    await page.getByRole('button', { name: 'Save changes', exact: true }).click()
+
+    await expect(page.getByText('Profile updated successfully!')).toBeVisible()
+    expect(profileUpdate).toEqual({
+      first_name: 'Ada',
+      last_name: '',
+      bio: 'Mathematician',
+    })
+  })
+
   test('preserves a protected destination and clears an expired session', async ({ page }) => {
     await page.route('**/api/auth/login', (route) =>
       route.fulfill({
