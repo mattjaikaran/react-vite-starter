@@ -22,10 +22,11 @@
     "test:e2e:debug": "playwright test --debug",
     "doctor": "react-doctor . --yes --no-telemetry --no-supply-chain --blocking error",
     "check-conventions": "bun run scripts/check_conventions.ts",
+    "check-agent-docs": "bun run scripts/check_agent_docs.ts",
     "check-dependencies": "bun run scripts/check_dependencies.ts",
     "api:generate": "bun run scripts/api-generate.ts",
     "api:check": "bun run scripts/api-check.ts",
-    "gauntlet": "bun run api:check && bun run lint && bun run typecheck && bun run test && bun run check-conventions && bun run check-dependencies"
+    "gauntlet": "bun run api:check && bun run lint && bun run typecheck && bun run test && bun run check-conventions && bun run check-dependencies && bun run check-agent-docs"
   },
   "dependencies": {
     "@hookform/resolvers": "5.2.2",

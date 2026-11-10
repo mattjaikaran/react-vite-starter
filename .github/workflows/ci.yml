@@ -132,9 +132,26 @@ jobs:
           path: playwright-report/
           retention-days: 7
 
+  # Docs-only changes skip the code jobs above, so the agent-instruction gate
+  # runs on every push and pull request.
+  agent-docs:
+    runs-on: *runner
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with: { bun-version: latest }
+      - uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
+          restore-keys: ${{ runner.os }}-bun-
+      - run: bun install --frozen-lockfile
+      - run: bun run check-agent-docs
+
   # The one required check: passes when each job passed or was skipped.
   ci-result:
-    needs: [changes, lint, typecheck, build, e2e]
+    needs: [changes, lint, typecheck, build, e2e, agent-docs]
     if: ${{ always() }}
     runs-on: *runner
     timeout-minutes: 2
