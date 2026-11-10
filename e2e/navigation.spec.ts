@@ -45,6 +45,6 @@ test.describe('Navigation', () => {
     await page.goto('/some-unknown-route')
 
     // Should show 404 page content
-    await expect(page.getByText(/404|not found/i)).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Page not found' })).toBeVisible()
   })
 })
