@@ -13,11 +13,18 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   /* Opt out of parallel tests on CI. */
   workers: process.env.CI ? 1 : undefined,
-  /* Reporter to use. See https://playwright.dev/docs/test-reporters.
+  /* Reporters to use. See https://playwright.dev/docs/test-reporters.
      The HTML report is never opened: serving it on failure blocks a
      non-interactive gate until its timeout. Use `bunx playwright show-report`
-     to read it. */
-  reporter: process.env.CI ? 'github' : [['html', { open: 'never' }]],
+     to read it.
+
+     The backend JOURNEYS gate reads `test-results/journeys.json`, so keep the
+     JSON reporter and its path. See AGENTS.md for the `@J-NNN` tag and
+     `J-NNN-S<n>:` step title convention. */
+  reporter: [
+    process.env.CI ? ['github'] : ['html', { open: 'never' }],
+    ['json', { outputFile: 'test-results/journeys.json' }],
+  ],
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('/')`. */

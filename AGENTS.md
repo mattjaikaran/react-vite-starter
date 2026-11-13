@@ -1,10 +1,13 @@
 # Agent instructions
 
-Single source of agent instructions for this repository. No nested `AGENTS.md`
-exists; `CLAUDE.md`, when one is added, contains only `@AGENTS.md`. Read
-[`README.md`](./README.md) for setup and feature details and
-[`DESIGN.md`](./DESIGN.md) before changing the interface. Tool procedures live in
-`.claude/skills/<name>/SKILL.md`; this repository ships the React Doctor skill.
+Rules for this frontend package only: package manager, commands, the generated
+API client, and the Playwright journey convention. Global policy — commits,
+secrets, branches, harness setup — lives in the repository root `AGENTS.md`;
+the nearest file wins. This is the only agent file here: do not add a
+`CLAUDE.md` or any tool-specific adapter.
+
+Read [`README.md`](./README.md) for setup and feature details and
+[`DESIGN.md`](./DESIGN.md) before changing the interface.
 
 ## Project overview
 
@@ -14,6 +17,7 @@ in `src/lib/auth.tsx` using bearer JWTs persisted in `localStorage`; see the
 security notes in `README.md`.
 
 - `src/lib/` — API client (`api.ts`), auth context, theme resolution, utilities.
+- `src/api/generated/` — committed OpenAPI client output; never edit by hand.
 - `src/components/ui/` — shared primitives; `src/components/` — layout and guard.
 - `src/pages/` — route components; `src/App.tsx` — route table.
 - `e2e/` — Playwright browser specs; `scripts/` — repository gates.
@@ -41,10 +45,12 @@ bun run test           # Vitest unit suite
 bun run test:e2e       # Playwright against the dev server
 bun run test:e2e:ui    # Playwright UI mode
 bun run doctor         # React Doctor, blocking on errors
+bun run api:generate   # regenerate src/api/generated
+bun run api:check      # fail when src/api/generated is stale
 bun run check-conventions
 bun run check-dependencies
 bun run check-agent-docs
-bun run gauntlet       # lint, typecheck, test, all three checks
+bun run gauntlet       # lint, typecheck, test, all checks, api:check
 ```
 
 `.github/workflows/ci.yml` runs lint/format/convention/dependency checks,
@@ -68,28 +74,50 @@ Markdown-only changes skip the code jobs but still run `check-agent-docs`.
 - Dependencies are pinned exactly in `package.json`, documented in
   `DEPENDENCIES.md`, and committed together with `bun.lock`.
 
-## Testing policy
+## Generated API client
+
+`src/api/generated/` is committed output from
+[`openapi-ts.config.ts`](./openapi-ts.config.ts): `@hey-api/openapi-ts` emits
+the TypeScript types, the axios-backed SDK, Zod schemas and TanStack Query
+options. Never edit those files by hand.
+
+- `bun run api:generate` — regenerate in place after a contract change.
+- `bun run api:check` — regenerate into a scratch directory and fail on any
+  drift; it is the first `bun run gauntlet` step.
+- `OPENAPI_INPUT` selects the document; the default is the vendored fixture
+  `backend/docs/openapi/openapi.json`.
+- Import the generated SDK and query options instead of hand-writing axios
+  calls for endpoints the contract covers.
+- Generated files are excluded from lint and format.
+
+## Testing and journeys
 
 - Vitest covers pure utilities (`src/lib/utils.test.ts`) and isolated
   primitives (`src/components/ui/Image.test.tsx`), configured in
   `vite.config.ts`.
 - Playwright covers routes, navigation, appearance, and account flows in
-  `e2e/`, driven by `playwright.config.ts` against `bun run dev`.
+  `e2e/`, driven by [`playwright.config.ts`](./playwright.config.ts) against
+  `bun run dev` on `http://localhost:5173`.
 - A change to browser behavior extends the matching e2e spec; do not add a
   second suite for the same surface.
 - Verify the actual surface: run the app or browser checks. A passing build is
   not visual verification, and never report a command you did not run.
 
-## Git and commits
+Journey convention, read by the backend JOURNEYS gate:
 
-- Conventional Commits: `type(scope): Imperative summary`; subject at most 50
-  characters, body wrapped at 72. Stage explicit paths, not `git add -A`.
-- One logical change per commit. Do not rewrite or force-push shared branches.
-- Never commit secrets: `.env`, `.env.local` and `.env.*.local` are ignored, and
-  `.env.example` documents the variables. `check-agent-docs` fails on a tracked
-  environment file.
-- Never commit `dist/`, `coverage/`, `test-results/` or `playwright-report/`;
-  they are generated and gitignored, and `check-agent-docs` fails when tracked.
+- One test per journey, tagged with its journey ID:
+  `test('...', { tag: '@J-001' }, async ({ page }) => { ... })`.
+- Each journey step is a `test.step` whose title starts with the step ID:
+  `await test.step('J-001-S1: create an account', ...)`. Do not write a
+  separate test per step.
+- The JSON reporter writes `test-results/journeys.json`; the gate reads it
+  (defaults `JOURNEYS_E2E_DIR=<repo>/../frontend/e2e` and
+  `JOURNEYS_E2E_REPORT=<repo>/../frontend/test-results/journeys.json`). Keep
+  the reporter block in the config.
+- When you rename or remove a step, update its `test.step` title in the same
+  change; a stale step tag is an orphan.
+- If a step cannot pass yet, record it in the journey's `known_issues` instead
+  of deleting the step title.
 
 ## Spec workflow (agent-run)
 
