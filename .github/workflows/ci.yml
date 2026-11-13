@@ -69,10 +69,59 @@ jobs:
           key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
           restore-keys: ${{ runner.os }}-bun-
       - run: bun install --frozen-lockfile
-      - run: bun run lint
-      - run: bun run format:check
       - run: bun run check-conventions
       - run: bun run check-dependencies
+
+  oxlint:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: *runner
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with: { bun-version: 1.4.4 }
+      - uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
+          restore-keys: ${{ runner.os }}-bun-
+      - run: bun install --frozen-lockfile
+      - run: bun run lint:strict
+
+  oxfmt:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: *runner
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with: { bun-version: 1.4.4 }
+      - uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
+          restore-keys: ${{ runner.os }}-bun-
+      - run: bun install --frozen-lockfile
+      - run: bun run format:check
+
+  react-doctor:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: *runner
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with: { bun-version: 1.4.4 }
+      - uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
+          restore-keys: ${{ runner.os }}-bun-
+      - run: bun install --frozen-lockfile
+      - run: bun run doctor
 
   typecheck:
     needs: changes
@@ -156,7 +205,7 @@ jobs:
 
   # The one required check: passes when each job passed or was skipped.
   ci-result:
-    needs: [changes, lint, typecheck, build, e2e, agent-docs]
+    needs: [changes, lint, oxlint, oxfmt, react-doctor, typecheck, build, e2e, agent-docs]
     if: ${{ always() }}
     runs-on: *runner
     timeout-minutes: 2
