@@ -53,8 +53,9 @@ bun run check-agent-docs
 bun run gauntlet       # lint, typecheck, test, all checks, api:check
 ```
 
-`.github/workflows/ci.yml` runs lint/format/convention/dependency checks,
-typecheck/unit tests, build, e2e and the agent-docs gate on self-hosted runners.
+`.github/workflows/ci.yml` runs Oxlint (`lint:strict`), Oxfmt (`format:check`), React
+Doctor (`doctor`), convention/dependency checks, typecheck/unit tests, build, e2e and the
+agent-docs gate on self-hosted runners.
 Markdown-only changes skip the code jobs but still run `check-agent-docs`.
 
 ## Code standards and architecture
